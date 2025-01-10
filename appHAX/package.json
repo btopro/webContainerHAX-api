@@ -1,0 +1,12 @@
+{
+  "name": "haxcms-stackblitz",
+  "version": "1.0.0",
+  "description": "HAXcms StackBlitz Demo",
+  "main": "index.js",
+  "scripts": {
+     "start": "hax site start --name mysite --y"
+  },
+  "dependencies": {
+    "@haxtheweb/create": "latest"
+  }
+}

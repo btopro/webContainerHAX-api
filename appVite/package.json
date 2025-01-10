@@ -1,0 +1,14 @@
+{
+    "name": "hax-site-starter",
+    "version": "1.0.0",
+    "description": "HAX site starter project",
+    "main": "index.js",
+    "scripts": {
+      "start": "hax site start --name mysite2 --y",
+      "dev": "vite"
+    },
+    "dependencies": {
+      "@haxtheweb/create": "latest",
+      "vite": "^4.3.9"
+    }
+  }

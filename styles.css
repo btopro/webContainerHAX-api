@@ -1,0 +1,105 @@
+/* Global box-sizing */
+* {
+    box-sizing: border-box;
+}
+
+/* Body styling */
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #1e1e1e;
+    color: #ddd;
+    font-family: Arial, sans-serif;
+}
+
+/* Main container with grid layout */
+.container {
+    display: grid;
+    grid-template-areas:
+        "ai editor"
+        "preview preview"
+        "terminal terminal";
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    height: 80%;
+    width: 90%;
+}
+
+/* Input group to align textarea and button side by side */
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+/* Grid area assignment */
+.ai {
+    grid-area: ai;
+}
+
+.editor {
+    grid-area: editor;
+}
+
+/* Text area styling */
+textarea {
+    width: 100%;
+    height: 100%;
+    resize: none;
+    border-radius: 0.5rem;
+    background: black;
+    color: greenyellow;
+    padding: 0.5rem 1rem;
+    font-family: monospace;
+    font-size: 1rem;
+    border: none;
+    flex: 1;
+}
+
+/* Button styling */
+button {
+    width: 80px;
+    height: 40px;
+    font-size: 14px;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+/* Preview section styling */
+.preview {
+    grid-area: preview;
+    grid-column: 1 / -1; /* Makes it span both columns */
+    height: 600px; /* Increase height */
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+iframe {
+    height: 100%;
+    width: 100%;
+    border-radius: 0.5rem;
+}
+
+/* Terminal section styling */
+.terminal {
+    grid-area: terminal;
+    background-color: #333;
+    color: #ddd;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-y: auto;
+    font-family: monospace;
+}
