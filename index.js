@@ -2,9 +2,68 @@ import { WebContainer } from '@webcontainer/api';
 import { files } from "./files";
 import { Terminal } from 'xterm';
 import 'xterm/css/xterm.css';
-import { askClaudeLocal, readFile} from './src/api.js';
+import { askClaudeLocal, askClaudeRemote, readFile} from './src/api.js';
 import * as fs from 'fs';
 import { FitAddon } from '@xterm/addon-fit';
+
+class ShellManager {
+  constructor() {
+      this.persistentShell = null;
+      this.shellInput = null;
+      this.currentOutput = '';
+  }
+
+  async initialize(WebContainersInstance) {
+      this.persistentShell = await WebContainersInstance.spawn('jsh');
+      this.shellInput = this.persistentShell.input.getWriter();
+      
+      // Set up output handling
+      this.persistentShell.output.pipeTo(new WritableStream({
+          write: (data) => {
+              terminal.write(data);
+              this.currentOutput += data;
+              console.log('Shell output:', data);
+          }
+      }));
+  }
+
+  async sendCommand(terminal, commandsString) {
+      if (!this.persistentShell) {
+          throw new Error('Shell not initialized');
+      }
+
+      const commands = commandsString.split(',').map(cmd => cmd.trim()).filter(cmd => cmd);
+      console.log('Commands to execute:', commands);
+
+      for (const command of commands) {
+          // Reset output buffer for this command
+          this.currentOutput = '';
+          
+          console.log(`Executing command: ${command}`);
+          terminal.write(`\n\n> ${command}\n`);
+          
+          try {
+              // Send command to shell
+              await this.shellInput.write(`${command}\n`);
+
+              // Wait for command to complete and output to settle
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              
+              // Display command output summary              
+              const output = this.currentOutput.trim();
+              terminal.write(`\n📝 Output:\n${output}\n`);
+              terminal.write(`\n✅ Completed: ${command}\n`);
+              terminal.write('\n' + '-'.repeat(50) + '\n'); // Separator line
+          } catch (error) {
+              console.error(`Error executing command ${command}:`, error);
+              terminal.write(`\n❌ Error: ${error.message}\n`);
+          }
+      }
+
+      iframe.src = iframe.src;
+  }
+}
+
 
 const iframe = document.querySelector('iframe');
 
@@ -43,101 +102,6 @@ async function startDevServer(terminal) {
   });
 }
 
-async function writeIndexJS(file, content) {
-  await WebContainersInstance.fs.writeFile(`/${file}`, content);
-}
-
-/*
-async function sendCommand(terminal, commandToSend) {
-  const commands = commandToSend.split('&&').map(cmd => cmd.trim());
-
-  for (const command of commands) {
-    const commandParts = command.split(' ');
-    const cmd = commandParts[0];
-    const args = commandParts.slice(1);
-
-    console.log(cmd)
-    console.log(args)
-
-
-    if (cmd === 'cd') {
-      // Handle cd command specially
-      try {
-        await WebContainersInstance.fs.chdir(args[0]);
-        terminal.write(`Changed directory to ${args[0]}\n`);
-      } catch (error) {
-        terminal.write(`Failed to change directory: ${error.message}\n`);
-        break;
-      }
-    } else {
-      const commandProcess = await WebContainersInstance.spawn(cmd, args);
-      commandProcess.output.pipeTo(new WritableStream({
-        write(data) {
-          terminal.write(data);
-          console.log(data);
-        }
-      }));
-
-      const exitCode = await commandProcess.exit;
-      if (exitCode === 0) {
-        iframe.src = iframe.src; 
-      } else {
-        terminal.write(`\nCommand "${command}" failed with exit code ${exitCode}\n`);
-        break; 
-      }
-  }
-  }
-}
-*/
-
-
-async function sendCommand(terminal, commandToSend) {
-  // Don't split on && - pass the whole command to the shell
-  const shellProcess = await WebContainersInstance.spawn('jsh', ['-c', commandToSend]);
-  
-  shellProcess.output.pipeTo(new WritableStream({
-    write(data) {
-      terminal.write(data);
-      console.log(data);
-    }
-  }));
-
-  const exitCode = await shellProcess.exit;
-  if (exitCode === 0) {
-    iframe.src = iframe.src; 
-  } else {
-    terminal.write(`\nCommand failed with exit code ${exitCode}\n`);
-  }
-}
-
-
-
-
-async function startShell(terminal) {
-  const shellProcess = await WebContainersInstance.spawn('jsh', {
-    terminal: {
-      cols: terminal.cols,
-      rows: terminal.rows,
-    },
-  });
-  shellProcess.output.pipeTo(
-    new WritableStream({
-      write(data) {
-        terminal.write(data);
-      },
-    })
-  );
-
-  const input = shellProcess.input.getWriter();
-
-  terminal.onData((data) => {
-    input.write(data);
-  });
-
-  return shellProcess;
-}
-
-
 //main
 window.addEventListener('load', async () => {
   const terminal = new Terminal({
@@ -155,64 +119,28 @@ window.addEventListener('load', async () => {
 
   submitButtonAI.addEventListener('click', async () => {
     const query = aiTextArea.value;
-
-    const jsFiles = await readFile();
-    //const commandsToAdd = "The command needed to deploy a site is 'hax site publish --service surge --y'";
-    const commandsToAdd = "The command needed to deploy a site is 'hax site surge --domain whatever.com'";
-    const combinedText = commandsToAdd + jsFiles;
-
-    //console.log (combinedText);
-
-    //get general ai answer
-    const llmPrompt = `Based on the following information, answer the query: ${query}\n\n${combinedText}`;
-    
     try {
-      const answer = await askClaudeLocal(llmPrompt);
-      ansTextArea.value = answer;
-    } catch (error) {
-      console.error('Failed to get response:', error);
-      cmdTextArea.value = `Error: ${error.message}`;
-    }
-
-    //get cmd ai answer
-    const cmdPrompt = `Based on the following information provide the specific command that would be needed to do this and only respond with the specific command.  Do not add any other text - just tell me the command: ${query}\n\n${combinedText}`;
-    
-    try {
-      const answer = await askClaudeLocal(cmdPrompt);
+      const answer = await askClaudeRemote(query);
       cmdTextArea.value = answer;
     } catch (error) {
       console.error('Failed to get response:', error);
       cmdTextArea.value = `Error: ${error.message}`;
     }
-
-  });
-
-  submitButtonCMD.addEventListener('click', () => {
-    const textValue = cmdTextArea.value;
-    sendCommand(terminal, textValue);    
   });
 
   WebContainersInstance = await WebContainer.boot();
   await WebContainersInstance.mount(files);
 
+  const shellManager = new ShellManager();
+  await shellManager.initialize(WebContainersInstance);
 
-  //swapped these two ^
-  await installDependencies(terminal);
-  await startDevServer(terminal);
-
-  const shellProcess = await startShell(terminal);
-  window.addEventListener('resize', () => {
-    fitAddon.fit();
-    shellProcess.resize({
-      cols: terminal.cols,
-      rows: terminal.rows,
-    });
+  submitButtonCMD.addEventListener('click', async () => {
+    const textValue = cmdTextArea.value;
+    await shellManager.sendCommand(terminal, textValue);    
   });
 
-  //PRODUCTION send of commands
-  ///const sendValue = "npm list && ls -al && npm --help";
-  ///await sendCommand(terminal, sendValue);    
-
+  await installDependencies(terminal);
+  await startDevServer(terminal);
 
   console.log('Window is loaded');
 });

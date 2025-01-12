@@ -46,6 +46,13 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+
+//
+app.get('/api/chatRemote', async (req, res) => {
+    res.json(process.env.VM_API_KEY);
+});
+
+
 //KEEP this part:
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
