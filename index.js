@@ -73,8 +73,6 @@ const submitButtonAI = document.querySelector('#submitButtonAI');
 const cmdTextArea = document.querySelector("#cmdTextArea");
 const submitButtonCMD = document.querySelector('#submitButtonCMD');
 
-const ansTextArea = document.querySelector("#ansTextArea");
-
 const terminalElement = document.querySelector('.terminal');
 
 let WebContainersInstance;
@@ -108,10 +106,6 @@ window.addEventListener('load', async () => {
     convertEol: true,
   });
   terminal.open(terminalElement);
-  
-  aiTextArea.value = "AI";
-  ansTextArea.value = "Answer";
-  cmdTextArea.value = "CMD";
 
   const fitAddon = new FitAddon();
   terminal.loadAddon(fitAddon);
@@ -142,5 +136,5 @@ window.addEventListener('load', async () => {
   await installDependencies(terminal);
   await startDevServer(terminal);
 
-  console.log('Window is loaded');
+  console.log('Window loaded');
 });

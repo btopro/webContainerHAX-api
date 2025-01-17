@@ -4,18 +4,22 @@
    <meta charset="UTF-8">
    <title>node.js WebContainers</title>
    <link rel="preload" href="styles.css" as="style" onload="this.rel='stylesheet'">
-   <noscript><link rel="stylesheet" href="styles.css"></noscript>
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
 <div class="container">
+    <h1>haxAI Site builder</h1>
     <div class="input-group ai">
-        <textarea id="aiTextArea">AI</textarea>
-        <button id="submitButtonAI">Ask AI</button>
-        <textarea id="ansTextArea">AI Answer</textarea>
+        <h2>Step 1</h2>
+        <textarea id="aiTextArea" placeholder="Ask 🧙 Merlin to conjure site commands!"></textarea>
+        <button id="submitButtonAI">🧙<br>Make it so</button>
     </div>
 
     <div class="input-group editor">
-        <textarea id="cmdTextArea">CMD</textarea>
+        <h2>Step 2</h2>
+        <textarea id="cmdTextArea" placeholder="Command to run will appear here"></textarea>
         <button id="submitButtonCMD">Send command</button>
     </div>
 
