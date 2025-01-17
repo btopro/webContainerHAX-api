@@ -27,41 +27,41 @@ class ShellManager {
       }));
   }
 
-  async sendCommand(terminal, commandsString) {
-      if (!this.persistentShell) {
-          throw new Error('Shell not initialized');
-      }
-
-      const commands = commandsString.split(',').map(cmd => cmd.trim()).filter(cmd => cmd);
-      console.log('Commands to execute:', commands);
-
-      for (const command of commands) {
-          // Reset output buffer for this command
-          this.currentOutput = '';
-          
-          console.log(`Executing command: ${command}`);
-          terminal.write(`\n\n> ${command}\n`);
-          
-          try {
-              // Send command to shell
-              await this.shellInput.write(`${command}\n`);
-
-              // Wait for command to complete and output to settle
-              await new Promise(resolve => setTimeout(resolve, 3000));
-              
-              // Display command output summary              
-              const output = this.currentOutput.trim();
-              terminal.write(`\n📝 Output:\n${output}\n`);
-              terminal.write(`\n✅ Completed: ${command}\n`);
-              terminal.write('\n' + '-'.repeat(50) + '\n'); // Separator line
-          } catch (error) {
-              console.error(`Error executing command ${command}:`, error);
-              terminal.write(`\n❌ Error: ${error.message}\n`);
-          }
-      }
-
-      iframe.src = iframe.src;
+  async sendCommand(terminal, commands) {
+    if (!this.persistentShell) {
+        throw new Error('Shell not initialized');
+    }
+    
+    // Ensure commands is an array
+    const commandsArray = Array.isArray(commands) ? commands : [commands];
+    
+    console.log('Commands to execute:', commandsArray);
+    
+    for (const command of commandsArray) {
+        // Reset output buffer for this command
+        this.currentOutput = '';
+        console.log(`Executing command: ${command}`);
+        terminal.write(`\n\n> ${command}\n`);
+        
+        try {
+            // Send command to shell
+            await this.shellInput.write(`${command}\n`);
+            // Wait for command to complete and output to settle
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            // Display command output summary
+            const output = this.currentOutput.trim();
+            terminal.write(`\n📝 Output:\n${output}\n`);
+            terminal.write(`\n✅ Completed: ${command}\n`);
+            terminal.write('\n' + '-'.repeat(50) + '\n');
+        } catch (error) {
+            console.error(`Error executing command ${command}:`, error);
+            terminal.write(`\n❌ Error: ${error.message}\n`);
+        }
+    }
+    iframe.src = iframe.src;
   }
+
 }
 
 
