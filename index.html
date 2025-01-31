@@ -1,30 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <title>node.js WebContainers</title>
-   <link rel="preload" href="styles.css" as="style" onload="this.rel='stylesheet'">
-   <noscript><link rel="stylesheet" href="styles.css"></noscript>
+    <meta charset="UTF-8">
+    <title>node.js WebContainers</title>
+    <link rel="preload" href="styles.css" as="style" onload="this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css"></noscript>
 </head>
 <body>
-<div class="container">
-    <div class="input-group ai">
-        <textarea id="aiTextArea">AI</textarea>
-        <button id="submitButtonAI">Ask AI</button>
-        <textarea id="ansTextArea">AI Answer</textarea>
+    <div class="container">
+        <div class="input-group ai">
+            <textarea id="aiTextArea">AI</textarea>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <button id="submitButtonAI">Ask AI</button>
+                <div class="spinner" id="aiSpinner"></div>
+            </div>
+            <textarea id="ansTextArea">AI Answer</textarea>
+        </div>
+        <div class="input-group editor">
+            <textarea id="cmdTextArea">CMD</textarea>
+            <button id="submitButtonCMD">Send command</button>
+        </div>
+        <div class="preview">
+            <iframe src="placeholder.html"></iframe>
+        </div>
     </div>
-
-    <div class="input-group editor">
-        <textarea id="cmdTextArea">CMD</textarea>
-        <button id="submitButtonCMD">Send command</button>
-    </div>
-
-    <div class="preview">
-        <iframe src="placeholder.html"></iframe>
-    </div>
-</div>
-
-<div class="terminal"></div>
-<script type="module" src="/index.js"></script>
+    <div class="terminal"></div>
+    <script type="module" src="/index.js"></script>
 </body>
 </html>

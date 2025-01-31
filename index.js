@@ -2,29 +2,55 @@ import { WebContainer } from '@webcontainer/api';
 import { files } from "./files";
 import { Terminal } from 'xterm';
 import 'xterm/css/xterm.css';
-import { askClaudeLocal, askClaudeRemote, readFile} from './src/api.js';
-import * as fs from 'fs';
+import { askClaudeRemote } from './src/api.js';
 import { FitAddon } from '@xterm/addon-fit';
 
+/** ShellManager: Manages a persistent shell in the WebContainer */
 class ShellManager {
   constructor() {
-      this.persistentShell = null;
-      this.shellInput = null;
-      this.currentOutput = '';
+    this.persistentShell = null;
+    this.shellInput = null;
+    this.currentOutput = '';
+    this.currentDirectory = '/';
+    this.lastCommand = '';
   }
 
-  async initialize(WebContainersInstance) {
-      this.persistentShell = await WebContainersInstance.spawn('jsh');
-      this.shellInput = this.persistentShell.input.getWriter();
-      
-      // Set up output handling
-      this.persistentShell.output.pipeTo(new WritableStream({
+  /** Initialize the persistent jsh shell and set up piping to the terminal */
+  async initialize(WebContainersInstance, terminal) {
+    this.persistentShell = await WebContainersInstance.spawn('jsh');
+    this.shellInput = this.persistentShell.input.getWriter();
+
+    // Pipe shell output and track directory changes
+    this.persistentShell.output
+      .pipeTo(
+        new WritableStream({
           write: (data) => {
-              terminal.write(data);
-              this.currentOutput += data;
-              console.log('Shell output:', data);
-          }
-      }));
+            terminal.write(data);
+            this.currentOutput += data;
+            console.log('Shell output:', data);
+            
+            // Update current directory if we detect a cd command completed
+            if (this.lastCommand.startsWith('cd ')) {
+              // Extract the new directory from pwd command output
+              const pwdMatch = this.currentOutput.match(/\/.*?\n/);
+              if (pwdMatch) {
+                this.currentDirectory = pwdMatch[0].trim();
+                console.log('Updated working directory:', this.currentDirectory);
+              }
+            }
+          },
+        })
+      )
+      .catch((err) => {
+        console.error('Error piping shell output:', err);
+      });
+
+    // Check if shell unexpectedly exits
+    this.persistentShell.exit.then((code) => {
+      console.log('Shell exited with code:', code);
+      this.persistentShell = null;
+      this.shellInput = null;
+    });
   }
 
   async sendCommand(terminal, commands) {
@@ -32,50 +58,135 @@ class ShellManager {
         throw new Error('Shell not initialized');
     }
     
-    // Ensure commands is an array
-    const commandsArray = Array.isArray(commands) ? commands : [commands];
+    let commandsArray;
+    if (Array.isArray(commands)) {
+        commandsArray = commands
+            .filter(cmd => cmd && cmd.trim().length > 0)
+            .map(cmd => cmd.trim());
+    } else {
+        // First handle delimited sections
+        let protectedCommands = commands;
+        
+        // Replace delimited sections with quoted content
+        protectedCommands = protectedCommands.replace(/--title\s+<<<BEGIN>>>([\s\S]*?)<<<END>>>/g, (match, content) => {
+            return `--title "${content}"`;
+        });
+        
+        protectedCommands = protectedCommands.replace(/--content\s+<<<BEGIN>>>([\s\S]*?)<<<END>>>/g, (match, content) => {
+            return `--content "${content}"`;
+        });
+
+        // Now split on commas
+        commandsArray = protectedCommands
+            .split(',')
+            .map(cmd => cmd.trim())
+            .filter(cmd => cmd.length > 0);
+    }
     
     console.log('Commands to execute:', commandsArray);
-    
-    for (const command of commandsArray) {
-        // Reset output buffer for this command
-        this.currentOutput = '';
-        console.log(`Executing command: ${command}`);
-        terminal.write(`\n\n> ${command}\n`);
         
-        try {
-            // Send command to shell
-            await this.shellInput.write(`${command}\n`);
-            // Wait for command to complete and output to settle
-            await new Promise(resolve => setTimeout(resolve, 3000));
+    try {
+        // Check current directory first
+        if (!this.currentDirectory.endsWith('mysite')) {
+            // Only attempt cd if not already in mysite
+            this.currentOutput = '';
+            this.lastCommand = 'pwd';
+            await this.shellInput.write('pwd\n');
+            await new Promise(resolve => setTimeout(resolve, 500));
             
-            // Display command output summary
-            const output = this.currentOutput.trim();
-            terminal.write(`\n📝 Output:\n${output}\n`);
-            terminal.write(`\n✅ Completed: ${command}\n`);
-            terminal.write('\n' + '-'.repeat(50) + '\n');
-        } catch (error) {
-            console.error(`Error executing command ${command}:`, error);
-            terminal.write(`\n❌ Error: ${error.message}\n`);
+            if (!this.currentOutput.includes('mysite')) {
+                console.log('Changing to mysite directory first...');
+                terminal.write(`\n\n> cd mysite\n`);
+                
+                this.currentOutput = '';
+                this.lastCommand = 'cd mysite';
+                await this.shellInput.write('cd mysite\n');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                await this.shellInput.write('pwd\n');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                terminal.write(`\n📝 Output:\n${this.currentOutput.trim()}\n`);
+                terminal.write(`\n✅ Changed to mysite directory\n`);
+                terminal.write('\n' + '-'.repeat(50) + '\n');
+            }
         }
+
+        // Execute each command
+        for (const command of commandsArray) {
+            this.currentOutput = '';
+            console.log(`Executing command: ${command}`);
+            terminal.write(`\n\n> ${command}\n`);
+            
+            try {
+                if (command.startsWith('cd ')) {
+                    const targetDir = command.slice(3);
+                    
+                    // Skip if already in this directory
+                    if (this.currentDirectory.endsWith(targetDir)) {
+                        terminal.write(`\nℹ️ Already in directory: ${this.currentDirectory}\n`);
+                        continue;
+                    }
+                    
+                    this.lastCommand = command;
+                    await this.shellInput.write(`${command}\n`);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await this.shellInput.write('pwd\n');
+                } else {
+                    this.lastCommand = command;
+                    await this.shellInput.write(`${command}\n`);
+                }
+                
+                await new Promise((resolve) => setTimeout(resolve, 3000));
+                
+                const output = this.currentOutput.trim();
+                terminal.write(`\n📝 Output:\n${output}\n`);
+                terminal.write(`\n✅ Completed: ${command}\n`);
+                terminal.write('\n' + '-'.repeat(50) + '\n');
+            } catch (error) {
+                console.error(`Error executing command ${command}:`, error);
+                terminal.write(`\n❌ Error: ${error.message}\n`);
+            }
+        }
+    } catch (error) {
+        console.error('Error in command execution:', error);
+        terminal.write(`\n❌ Fatal error: ${error.message}\n`);
     }
+    
     iframe.src = iframe.src;
   }
 
+  /** Get the current working directory */
+  getCurrentDirectory() {
+    return this.currentDirectory;
+  }
+
+  /** Check if the shell is initialized and ready */
+  isReady() {
+    return this.persistentShell !== null && this.shellInput !== null;
+  }
+
+  /** Clean up resources when done */
+  async cleanup() {
+    if (this.shellInput) {
+      await this.shellInput.close();
+    }
+    this.persistentShell = null;
+    this.shellInput = null;
+    this.currentOutput = '';
+    this.currentDirectory = '/';
+    this.lastCommand = '';
+  }
 }
 
-
+// DOM references
 const iframe = document.querySelector('iframe');
-
-const aiTextArea = document.querySelector("#aiTextArea");
+const aiTextArea = document.querySelector('#aiTextArea');
 const submitButtonAI = document.querySelector('#submitButtonAI');
-
-const cmdTextArea = document.querySelector("#cmdTextArea");
+const cmdTextArea = document.querySelector('#cmdTextArea');
 const submitButtonCMD = document.querySelector('#submitButtonCMD');
-
-const ansTextArea = document.querySelector("#ansTextArea");
-
+const ansTextArea = document.querySelector('#ansTextArea');
 const terminalElement = document.querySelector('.terminal');
+const aiSpinner = document.querySelector('#aiSpinner'); // Add spinner reference
 
 let WebContainersInstance;
 
@@ -102,45 +213,64 @@ async function startDevServer(terminal) {
   });
 }
 
-//main
+/** Main entry point */
 window.addEventListener('load', async () => {
-  const terminal = new Terminal({
-    convertEol: true,
-  });
+  // Set up xterm.js
+  const terminal = new Terminal({ convertEol: true });
   terminal.open(terminalElement);
-  
-  aiTextArea.value = "AI";
-  ansTextArea.value = "Answer";
-  cmdTextArea.value = "CMD";
 
+  // Initialize text areas
+  aiTextArea.value = 'AI';
+  ansTextArea.value = 'Answer';
+  cmdTextArea.value = 'CMD';
+
+  // Fit the terminal size
   const fitAddon = new FitAddon();
   terminal.loadAddon(fitAddon);
   fitAddon.fit();
 
+  // "Ask Claude" button => fetch AI response => put into cmdTextArea
   submitButtonAI.addEventListener('click', async () => {
     const query = aiTextArea.value;
+    
+    // Show spinner and disable button
+    aiSpinner.style.display = 'block';
+    submitButtonAI.disabled = true;
+    
     try {
       const answer = await askClaudeRemote(query);
       cmdTextArea.value = answer;
+      ansTextArea.value = 'Response received successfully!';
     } catch (error) {
       console.error('Failed to get response:', error);
       cmdTextArea.value = `Error: ${error.message}`;
+      ansTextArea.value = 'Error occurred while getting response';
+    } finally {
+      // Hide spinner and re-enable button
+      aiSpinner.style.display = 'none';
+      submitButtonAI.disabled = false;
     }
   });
 
+  // Boot the WebContainer
   WebContainersInstance = await WebContainer.boot();
+
+  // Mount project files
   await WebContainersInstance.mount(files);
 
+  // Create and initialize the shell
   const shellManager = new ShellManager();
-  await shellManager.initialize(WebContainersInstance);
+  await shellManager.initialize(WebContainersInstance, terminal);
 
+  // "Send Command" button => run whatever is in cmdTextArea
   submitButtonCMD.addEventListener('click', async () => {
     const textValue = cmdTextArea.value;
-    await shellManager.sendCommand(terminal, textValue);    
+    await shellManager.sendCommand(terminal, textValue);
   });
 
+  // Install deps and start dev server
   await installDependencies(terminal);
   await startDevServer(terminal);
 
-  console.log('Window is loaded');
+  console.log('Window is loaded and WebContainer is initialized.');
 });
