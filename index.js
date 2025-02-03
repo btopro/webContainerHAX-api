@@ -64,23 +64,27 @@ class ShellManager {
             .filter(cmd => cmd && cmd.trim().length > 0)
             .map(cmd => cmd.trim());
     } else {
-        // First handle delimited sections
-        let protectedCommands = commands;
+        // Handle the command as a single unit
+        let command = commands.trim();
         
-        // Replace delimited sections with quoted content
-        protectedCommands = protectedCommands.replace(/--title\s+<<<BEGIN>>>([\s\S]*?)<<<END>>>/g, (match, content) => {
-            return `--title "${content}"`;
-        });
+        // Check if this is a HAX command with content
+        if (command.includes('hax site node:add')) {
+            // Find the content parameter
+            const contentStart = command.indexOf('--content');
+            if (contentStart !== -1) {
+                // Split the command into pre-content and content parts
+                const preContent = command.substring(0, contentStart + 9); // +9 for '--content'
+                const remainingContent = command.substring(contentStart + 9).trim();
+                
+                // Wrap the entire content in quotes if it's not already
+                if (!remainingContent.startsWith('"')) {
+                    command = `${preContent} "${remainingContent}"`;
+                }
+            }
+        }
         
-        protectedCommands = protectedCommands.replace(/--content\s+<<<BEGIN>>>([\s\S]*?)<<<END>>>/g, (match, content) => {
-            return `--content "${content}"`;
-        });
-
-        // Now split on commas
-        commandsArray = protectedCommands
-            .split(',')
-            .map(cmd => cmd.trim())
-            .filter(cmd => cmd.length > 0);
+        // Put the command into an array as a single item
+        commandsArray = [command];
     }
     
     console.log('Commands to execute:', commandsArray);
@@ -117,35 +121,13 @@ class ShellManager {
             console.log(`Executing command: ${command}`);
             terminal.write(`\n\n> ${command}\n`);
             
-            try {
-                if (command.startsWith('cd ')) {
-                    const targetDir = command.slice(3);
-                    
-                    // Skip if already in this directory
-                    if (this.currentDirectory.endsWith(targetDir)) {
-                        terminal.write(`\nℹ️ Already in directory: ${this.currentDirectory}\n`);
-                        continue;
-                    }
-                    
-                    this.lastCommand = command;
-                    await this.shellInput.write(`${command}\n`);
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    await this.shellInput.write('pwd\n');
-                } else {
-                    this.lastCommand = command;
-                    await this.shellInput.write(`${command}\n`);
-                }
-                
-                await new Promise((resolve) => setTimeout(resolve, 3000));
-                
-                const output = this.currentOutput.trim();
-                terminal.write(`\n📝 Output:\n${output}\n`);
-                terminal.write(`\n✅ Completed: ${command}\n`);
-                terminal.write('\n' + '-'.repeat(50) + '\n');
-            } catch (error) {
-                console.error(`Error executing command ${command}:`, error);
-                terminal.write(`\n❌ Error: ${error.message}\n`);
-            }
+            this.lastCommand = command;
+            await this.shellInput.write(`${command}\n`);
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            
+            terminal.write(`\n📝 Output:\n${this.currentOutput.trim()}\n`);
+            terminal.write(`\n✅ Completed: ${command}\n`);
+            terminal.write('\n' + '-'.repeat(50) + '\n');
         }
     } catch (error) {
         console.error('Error in command execution:', error);
@@ -186,7 +168,7 @@ const cmdTextArea = document.querySelector('#cmdTextArea');
 const submitButtonCMD = document.querySelector('#submitButtonCMD');
 const ansTextArea = document.querySelector('#ansTextArea');
 const terminalElement = document.querySelector('.terminal');
-const aiSpinner = document.querySelector('#aiSpinner'); // Add spinner reference
+const aiSpinner = document.querySelector('#aiSpinner');
 
 let WebContainersInstance;
 
