@@ -6,43 +6,46 @@
 /* Body styling */
 body {
     margin: 0;
-    height: 100vh;
-    display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #1e1e1e;
-    color: #ddd;
-    font-family: Arial, sans-serif;
-}
-
-/* Main container with grid layout */
-.container {
-    display: grid;
-    grid-template-areas:
-        "ai editor"
-        "preview preview"
-        "terminal terminal";
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    height: 80%;
-    width: 90%;
+    color: black;
+    background-color: white;
+    font-family: "Press Start 2P", serif;
+    font-weight: 400;
+    font-style: normal; 
 }
 
 /* Input group to align textarea and button side by side */
 .input-group {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    width: 100%;
+    border-radius: 0;
+    border: none;
+    width: 50%;
+    margin: 0 auto;
+    padding: 16px;
 }
 
-/* Grid area assignment */
-.ai {
-    grid-area: ai;
+.input-group h2 {
+    margin: 0;
+    width: 200px;
+    font-size: 20px;
+}
+
+.ai, .ai button {
+    padding: 0;
+    height: 100px;
+    font-size: 24px;
+}
+
+.editor, .editor button {
+    height: 80px;
+    padding: 0;
+    font-size: 18px;
 }
 
 .editor {
-    grid-area: editor;
+    margin-top: 16px;
 }
 
 /* Text area styling */
@@ -51,28 +54,27 @@ textarea {
     height: 100%;
     resize: none;
     border-radius: 0.5rem;
-    background: black;
-    color: greenyellow;
+    background: #f8f8f8;
+    color: black;
     padding: 0.5rem 1rem;
     font-family: monospace;
     font-size: 1rem;
     border: none;
-    flex: 1;
 }
 
 /* Button styling */
 button {
-    width: 80px;
+    min-width: 80px;
     height: 40px;
     font-size: 14px;
-    border-radius: 0.5rem;
     border: none;
+    display: block;
     cursor: pointer;
     background-color: #4CAF50;
     color: white;
     transition: background-color 0.3s;
 }
-
+button:focus,
 button:hover {
     background-color: #45a049;
 }
@@ -85,9 +87,7 @@ button:disabled {
 
 /* Preview section styling */
 .preview {
-    grid-area: preview;
-    grid-column: 1 / -1; /* Makes it span both columns */
-    height: 600px; /* Increase height */
+    height: 66vh;
     border-radius: 0.5rem;
     overflow: hidden;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -101,12 +101,14 @@ iframe {
 
 /* Terminal section styling */
 .terminal {
-    grid-area: terminal;
+    height: 10vh;
+    width: 100%;
     background-color: #333;
     color: #ddd;
-    padding: 1rem;
-    border-radius: 0.5rem;
+    padding: 0;
+    margin: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     font-family: monospace;
 }
 

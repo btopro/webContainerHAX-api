@@ -166,7 +166,11 @@ const aiTextArea = document.querySelector('#aiTextArea');
 const submitButtonAI = document.querySelector('#submitButtonAI');
 const cmdTextArea = document.querySelector('#cmdTextArea');
 const submitButtonCMD = document.querySelector('#submitButtonCMD');
+<<<<<<< HEAD
 const ansTextArea = document.querySelector('#ansTextArea');
+=======
+
+>>>>>>> 4e0a5c40eac0443a3c0ce7714bc71637b4a32226
 const terminalElement = document.querySelector('.terminal');
 const aiSpinner = document.querySelector('#aiSpinner');
 
@@ -254,5 +258,5 @@ window.addEventListener('load', async () => {
   await installDependencies(terminal);
   await startDevServer(terminal);
 
-  console.log('Window is loaded and WebContainer is initialized.');
+  console.log('Window loaded');
 });
