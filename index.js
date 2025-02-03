@@ -197,8 +197,8 @@ window.addEventListener('load', async () => {
 
   // "Ask Claude" button => fetch AI response => write to recipe file and run play command
   submitButtonAI.addEventListener('click', async () => {
-    const query = aiTextArea.value;
-    
+    const query = 'I already have a site called mysite and ' + aiTextArea.value;
+
     // Show spinner and disable button
     aiSpinner.style.display = 'block';
     submitButtonAI.disabled = true;
