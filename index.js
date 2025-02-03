@@ -248,6 +248,7 @@ window.addEventListener('load', async () => {
           terminal.write('\n' + '-'.repeat(50) + '\n');
           
           // Refresh the iframe
+          await new Promise(resolve => setTimeout(resolve, 5000));
           iframe.src = iframe.src;
       } catch (error) {
           console.error('Error executing play command:', error);
