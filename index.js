@@ -30,6 +30,7 @@ class ShellManager {
             console.log('Shell output:', data);
             
             // Update current directory if we detect a cd command completed
+            /*
             if (this.lastCommand.startsWith('cd ')) {
               // Extract the new directory from pwd command output
               const pwdMatch = this.currentOutput.match(/\/.*?\n/);
@@ -38,6 +39,7 @@ class ShellManager {
                 console.log('Updated working directory:', this.currentDirectory);
               }
             }
+            */
           },
         })
       )
@@ -53,44 +55,19 @@ class ShellManager {
     });
   }
 
-  async sendCommand(terminal, commands) {
+  // Removed writeRecipeFile method as it's no longer needed
+
+  async sendCommand(terminal, command) {
     if (!this.persistentShell) {
         throw new Error('Shell not initialized');
     }
     
-    let commandsArray;
-    if (Array.isArray(commands)) {
-        commandsArray = commands
-            .filter(cmd => cmd && cmd.trim().length > 0)
-            .map(cmd => cmd.trim());
-    } else {
-        // Handle the command as a single unit
-        let command = commands.trim();
-        
-        // Check if this is a HAX command with content
-        if (command.includes('hax site node:add')) {
-            // Find the content parameter
-            const contentStart = command.indexOf('--content');
-            if (contentStart !== -1) {
-                // Split the command into pre-content and content parts
-                const preContent = command.substring(0, contentStart + 9); // +9 for '--content'
-                const remainingContent = command.substring(contentStart + 9).trim();
-                
-                // Wrap the entire content in quotes if it's not already
-                if (!remainingContent.startsWith('"')) {
-                    command = `${preContent} "${remainingContent}"`;
-                }
-            }
-        }
-        
-        // Put the command into an array as a single item
-        commandsArray = [command];
-    }
-    
-    console.log('Commands to execute:', commandsArray);
+    command = command.trim();
+    console.log('Command to execute:', command);
         
     try {
         // Check current directory first
+        /*
         if (!this.currentDirectory.endsWith('mysite')) {
             // Only attempt cd if not already in mysite
             this.currentOutput = '';
@@ -114,21 +91,20 @@ class ShellManager {
                 terminal.write('\n' + '-'.repeat(50) + '\n');
             }
         }
+        */
 
-        // Execute each command
-        for (const command of commandsArray) {
-            this.currentOutput = '';
-            console.log(`Executing command: ${command}`);
-            terminal.write(`\n\n> ${command}\n`);
-            
-            this.lastCommand = command;
-            await this.shellInput.write(`${command}\n`);
-            await new Promise((resolve) => setTimeout(resolve, 3000));
-            
-            terminal.write(`\n📝 Output:\n${this.currentOutput.trim()}\n`);
-            terminal.write(`\n✅ Completed: ${command}\n`);
-            terminal.write('\n' + '-'.repeat(50) + '\n');
-        }
+        // Execute the command
+        this.currentOutput = '';
+        console.log(`Executing command: ${command}`);
+        terminal.write(`\n\n> ${command}\n`);
+        
+        this.lastCommand = command;
+        await this.shellInput.write(`${command}\n`);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        
+        terminal.write(`\n📝 Output:\n${this.currentOutput.trim()}\n`);
+        terminal.write(`\n✅ Completed: ${command}\n`);
+        terminal.write('\n' + '-'.repeat(50) + '\n');
     } catch (error) {
         console.error('Error in command execution:', error);
         terminal.write(`\n❌ Fatal error: ${error.message}\n`);
@@ -209,29 +185,6 @@ window.addEventListener('load', async () => {
   terminal.loadAddon(fitAddon);
   fitAddon.fit();
 
-  // "Ask Claude" button => fetch AI response => put into cmdTextArea
-  submitButtonAI.addEventListener('click', async () => {
-    const query = aiTextArea.value;
-    
-    // Show spinner and disable button
-    aiSpinner.style.display = 'block';
-    submitButtonAI.disabled = true;
-    
-    try {
-      const answer = await askClaudeRemote(query);
-      cmdTextArea.value = answer;
-      ansTextArea.value = 'Response received successfully!';
-    } catch (error) {
-      console.error('Failed to get response:', error);
-      cmdTextArea.value = `Error: ${error.message}`;
-      ansTextArea.value = 'Error occurred while getting response';
-    } finally {
-      // Hide spinner and re-enable button
-      aiSpinner.style.display = 'none';
-      submitButtonAI.disabled = false;
-    }
-  });
-
   // Boot the WebContainer
   WebContainersInstance = await WebContainer.boot();
 
@@ -241,6 +194,75 @@ window.addEventListener('load', async () => {
   // Create and initialize the shell
   const shellManager = new ShellManager();
   await shellManager.initialize(WebContainersInstance, terminal);
+
+  // "Ask Claude" button => fetch AI response => write to recipe file and run play command
+  submitButtonAI.addEventListener('click', async () => {
+    const query = aiTextArea.value;
+    
+    // Show spinner and disable button
+    aiSpinner.style.display = 'block';
+    submitButtonAI.disabled = true;
+    
+    try {
+      // Get the commands from Claude
+      const commands = await askClaudeRemote(query);
+      
+      // Write the commands directly to the recipe file
+      const recipeContent = Array.isArray(commands) ? commands.join('\n') : commands;
+      await WebContainersInstance.fs.writeFile('/mysite/newsite.recipe', recipeContent);
+      console.log('Recipe file written successfully');
+      
+      // Create and execute the play command
+      //const playCommand = 'hax site recipe:play --recipe newsite.recipe --y';   //orig
+      //cmdTextArea.value = playCommand;    //remove this for demo
+      
+      // Check current directory and build the appropriate command
+      let playCommand = 'hax site recipe:play --recipe newsite.recipe --y';
+      if (!shellManager.currentOutput.includes('mysite')) {
+          console.log('Not in mysite directory, will prepend cd command');
+          playCommand = 'cd mysite && ' + playCommand;
+      } else {
+          console.log('Already in mysite directory, running play command directly');
+      }
+      
+      // Execute the play command directly (single command, no need for array handling)
+      if (!shellManager.persistentShell) {
+          throw new Error('Shell not initialized');
+      }
+      
+      try {
+          // Ensure we're in the mysite directory
+          /*
+          if (!shellManager.currentDirectory.endsWith('mysite')) {
+              await shellManager.shellInput.write('cd mysite\n');
+              await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          */
+
+          // Execute the play command
+          terminal.write(`\n\n> ${playCommand}\n`);
+          await shellManager.shellInput.write(`${playCommand}\n`);
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          
+          terminal.write(`\n✅ Recipe playback initiated\n`);
+          terminal.write('\n' + '-'.repeat(50) + '\n');
+          
+          // Refresh the iframe
+          iframe.src = iframe.src;
+      } catch (error) {
+          console.error('Error executing play command:', error);
+          terminal.write(`\n❌ Error: ${error.message}\n`);
+      }
+      
+    } catch (error) {
+      console.error('Failed to process commands:', error);
+      cmdTextArea.value = `Error: ${error.message}`;
+    } finally {
+      // Hide spinner and re-enable button
+      aiSpinner.style.display = 'none';
+      submitButtonAI.disabled = false;
+    }
+  });
 
   // "Send Command" button => run whatever is in cmdTextArea
   submitButtonCMD.addEventListener('click', async () => {

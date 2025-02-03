@@ -101,7 +101,7 @@ iframe {
 
 /* Terminal section styling */
 .terminal {
-    height: 10vh;
+    height: 20vh;
     width: 100%;
     background-color: #333;
     color: #ddd;
