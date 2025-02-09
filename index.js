@@ -2,7 +2,7 @@ import { WebContainer } from '@webcontainer/api';
 import { files } from "./files";
 import { Terminal } from 'xterm';
 import 'xterm/css/xterm.css';
-import { askClaudeRemote } from './src/api.js';
+import { askClaudeRemote, askICDSRemote } from './src/api.js';
 import { FitAddon } from '@xterm/addon-fit';
 
 /** ShellManager: Manages a persistent shell in the WebContainer */
@@ -205,8 +205,11 @@ window.addEventListener('load', async () => {
     
     try {
       // Get the commands from Claude
-      const commands = await askClaudeRemote(query);
-      
+      const psuCheckbox = document.getElementById('psuCheckbox');
+
+      //const commands = await askClaudeRemote(query);  //orig
+      const commands = await (psuCheckbox.checked ? askICDSRemote(query) : askClaudeRemote(query));
+
       // Write the commands directly to the recipe file
       const recipeContent = Array.isArray(commands) ? commands.join('\n') : commands;
       await WebContainersInstance.fs.writeFile('/mysite/newsite.recipe', recipeContent);
