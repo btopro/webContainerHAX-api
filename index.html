@@ -1,51 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <title>node.js WebContainers</title>
-   <link rel="preload" href="styles.css" as="style" onload="this.rel='stylesheet'">
-   <link rel="preconnect" href="https://fonts.googleapis.com">
+    <meta charset="UTF-8">
+    <title>node.js WebContainers</title>
+    <link rel="preload" href="styles.css" as="style" onload="this.rel='stylesheet'">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
-<div class="container">
-    <h1>haxAI Site builder</h1>
-    <div class="input-group ai">
-        <h2>Step 1</h2>
-        <textarea id="aiTextArea" placeholder="Ask 🧙 Merlin to conjure site commands!"></textarea>
-        <button id="submitButtonAI">🧙<br>Make it so</button>
-        <label><input type="checkbox" id="psuCheckbox"> PSU</label>
-        <div class="spinner" id="aiSpinner"></div>
+    <div class="container">
+        <h1>haxAI Site builder</h1>
+        <p>
+            Use the input field below to ask haxAI to create a site for you.
+            This will generate a recipe which is then fed into the webcontainer running here.
+        </p>
+        <div class="input-group ai">
+            <h2>AI</h2>
+            <textarea id="aiTextArea" placeholder="Ask 🧙 Merlin"></textarea>
+            <button id="submitButtonAI">🪄 Make</button>
+            <label><input type="checkbox" id="psuCheckbox">PSU</label>
+            <div class="spinner" id="aiSpinner"></div>
+        </div>
+
+        <hr />
+        <h1>Actions to execute</h1>
+
+        <div class="input-group editor">
+            <h2>Recipe</h2>
+            <textarea id="recipeTextArea" placeholder="Recipe"></textarea>
+            <button id="recipeButtonCMD">Run</button>
+            <button id="recipeDownload">Download</button>
+        </div>
+        <div class="input-group editor">
+            <h2>URL</h2>
+            <textarea id="recipeURLArea" placeholder="URL to a recipe to run one locally"></textarea>
+            <button id="recipeButtonURL">Run</button>
+        </div>
+
+        <div class="input-group editor">
+            <h2>Command prompt</h2>
+            <textarea id="cmdTextArea" placeholder="Command to run"></textarea>
+            <button id="submitButtonCMD">Run</button>
+        </div>
+
+
     </div>
-
-    <div class="input-group editor">
-        <h2>Local Command</h2>
-        <textarea id="cmdTextArea" placeholder="Command to run will appear here"></textarea>
-        <button id="submitButtonCMD">Send command</button>
+    <div class="window">
+        <div class="preview">
+            <iframe src="placeholder.html"></iframe>
+        </div>
+        <div class="terminal"></div>
     </div>
-
-    <div class="input-group editor">
-        <h2>Recipe URL</h2>
-        <textarea id="recipeURLArea" placeholder="Recipe URL will appear here"></textarea>
-        <button id="recipeButtonURL">Get Recipe</button>
-
-    </div>
-
-    <div class="input-group editor">
-        <h2>Recipe Text</h2>
-        <textarea id="recipeTextArea" placeholder="Recipe will appear here"></textarea>
-        <button id="recipeButtonCMD">Send Recipe</button>
-        <button id="recipeDownload" style="margin-left: 10px;">Download Recipe</button>
-    </div>
-
-
-    <div class="preview">
-        <iframe src="placeholder.html"></iframe>
-    </div>
-</div>
-
-<div class="terminal"></div>
-<script type="module" src="/index.js"></script>
+    <script type="module" src="/index.js"></script>
 </body>
 </html>

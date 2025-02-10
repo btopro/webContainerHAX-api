@@ -319,8 +319,8 @@ window.addEventListener('load', async () => {
   terminal.open(terminalElement);
 
   // Initialize text areas
-  aiTextArea.value = 'AI';
-  cmdTextArea.value = 'CMD';
+  aiTextArea.value = '';
+  cmdTextArea.value = '';
 
   // Fit the terminal size
   const fitAddon = new FitAddon();
