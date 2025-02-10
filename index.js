@@ -134,6 +134,141 @@ class ShellManager {
     this.currentDirectory = '/';
     this.lastCommand = '';
   }
+
+
+  //NEW
+  async getRecipeURL(terminal, urlToGet) {
+    try {
+      // Fetch content from URL
+      const response = await fetch(urlToGet);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const recipeContent = await response.text();
+      // Write content to file
+      await WebContainersInstance.fs.writeFile('/mysite/urlsite.recipe', recipeContent);
+      console.log('Recipe file written successfully');
+      recipeTextArea.value = recipeContent;
+    } catch (error) {
+      console.error('Error fetching or writing recipe:', error);
+      throw error;
+    }
+  }
+
+  async runRecipeURL(terminal, shellManager) {
+    try {
+      // Check current directory and build the appropriate command
+      let playCommandRecipe = 'hax site recipe:play --recipe urlsite.recipe --y';
+
+      if (!shellManager.currentOutput.includes('mysite')) {
+          console.log('Not in mysite directory, will prepend cd command');
+          playCommandRecipe = 'cd mysite && ' + playCommandRecipe;
+      } else {
+          console.log('Already in mysite directory, running play command directly');
+      }
+      
+      if (!shellManager.persistentShell) {
+          throw new Error('Shell not initialized');
+      }
+      
+      try {
+          terminal.write(`\n\n> ${playCommandRecipe}\n`);
+          await shellManager.shellInput.write(`${playCommandRecipe}\n`);
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          
+          terminal.write(`\n✅ Recipe playback initiated\n`);
+          terminal.write('\n' + '-'.repeat(50) + '\n');
+          
+          // Refresh the iframe
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          iframe.src = iframe.src;
+      } catch (error) {
+          console.error('Error executing play command:', error);
+          terminal.write(`\n❌ Error: ${error.message}\n`);
+      }
+      
+    } catch (error) {
+      console.error('Failed to process commands:', error);
+      cmdTextArea.value = `Error: ${error.message}`;
+    } finally {
+      // Hide spinner and re-enable button
+      aiSpinner.style.display = 'none';
+      submitButtonAI.disabled = false;
+    }
+  }
+
+
+  async runRecipeDownload(terminal, shellManager) {
+    try {
+      console.log('Starting download process...');
+  
+      const filePath = '/mysite/newsite.recipe';
+      console.log('File path:', filePath);
+      
+      console.log('Attempting to read file from WebContainer...');
+      const fileContent = await WebContainersInstance.fs.readFile(filePath);
+      console.log('File content read:', fileContent);
+      
+      // Check if file content exists and has length
+      if (!fileContent || !fileContent.length) {
+        throw new Error('File content is empty or invalid');
+      }
+      console.log('File content validation passed');
+      
+      const contentArray = new Uint8Array(fileContent);
+      console.log('Content converted to Uint8Array:', contentArray);
+      
+      const blob = new Blob([contentArray], { type: 'application/octet-stream' });
+      console.log('Blob created:', blob);
+      
+      const url = window.URL.createObjectURL(blob);
+      console.log('Blob URL created:', url);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      const fileName = filePath.split('/').pop();
+      a.download = fileName;
+      console.log('Download filename set to:', fileName);
+      
+      // Make anchor invisible
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      console.log('Anchor element added to document');
+      
+      // Small delay to ensure the element is in the DOM
+      console.log('Waiting for DOM update...');
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('Triggering click event...');
+      a.click();
+      
+      // Cleanup
+      console.log('Starting cleanup...');
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      console.log('Cleanup completed');
+      
+      console.log('Download process completed successfully');
+      
+    } catch (error) {
+      console.error('Error in download process:');
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      console.error('Full error object:', error);
+      
+      // Log WebContainer instance state if possible
+      try {
+        console.log('WebContainer state:', WebContainersInstance);
+      } catch (e) {
+        console.error('Could not log WebContainer state:', e);
+      }
+      
+      // You might want to show this error to the user
+      throw new Error(`Failed to download file: ${error.message}`);
+    }
+  }
+
+//END
 }
 
 // DOM references
@@ -144,6 +279,13 @@ const cmdTextArea = document.querySelector('#cmdTextArea');
 const submitButtonCMD = document.querySelector('#submitButtonCMD');
 const terminalElement = document.querySelector('.terminal');
 const aiSpinner = document.querySelector('#aiSpinner');
+
+const recipeurlTextArea = document.querySelector('#recipeURLArea');
+const submitButtonURL = document.querySelector('#recipeButtonURL');
+const recipeTextArea = document.querySelector('#recipeTextArea');
+const submitButtonRecipe = document.querySelector('#recipeButtonCMD');
+const submitButtonRecipeDownload = document.querySelector('#recipeDownload');
+
 
 let WebContainersInstance;
 
@@ -215,6 +357,8 @@ window.addEventListener('load', async () => {
       await WebContainersInstance.fs.writeFile('/mysite/newsite.recipe', recipeContent);
       console.log('Recipe file written successfully');
       
+      recipeTextArea.value = recipeContent;
+
       // Create and execute the play command
       //const playCommand = 'hax site recipe:play --recipe newsite.recipe --y';   //orig
       //cmdTextArea.value = playCommand;    //remove this for demo
@@ -273,6 +417,25 @@ window.addEventListener('load', async () => {
     const textValue = cmdTextArea.value;
     await shellManager.sendCommand(terminal, textValue);
   });
+
+
+  // get content for recipe from url
+  submitButtonURL.addEventListener('click', async () => {
+    const recipeURL = recipeurlTextArea.value
+    await shellManager.getRecipeURL(terminal, recipeURL);
+  });
+
+  // run recipe retrieved from
+  submitButtonRecipe.addEventListener('click', async () => {
+    await shellManager.runRecipeURL(terminal,shellManager);
+  });
+  
+  // run recipe retrieved from
+  submitButtonRecipeDownload.addEventListener('click', async () => {
+    await shellManager.runRecipeDownload(terminal,shellManager);
+  });
+  
+
 
   // Install deps and start dev server
   await installDependencies(terminal);
